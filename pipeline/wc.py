@@ -93,4 +93,5 @@ def main():
     r.to_csv(f'{out}/withdrawal_control.csv', index=False)
     print(r.drop(columns='top').to_string(index=False)); print(rows[0]['top'])
 
-main()
+if __name__ == "__main__":
+    main()

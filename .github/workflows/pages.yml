@@ -48,12 +48,6 @@ jobs:
           REF: ${{ inputs.ref || 'main' }}
         run: python -I pipeline/fetch.py "$DS" "$REF"
 
-      - name: Operator history and entity tables
-        run: |
-          mkdir -p "$DATA"
-          python -I pipeline/history.py "$DS" "$DATA" --every 4
-          python -I pipeline/tables.py "$DATA"
-
       # Withdrawal lens: needs proxy slots for each withdrawal address. Reads only addresses
       # missing from the cache. If the RPC fails, the committed withdrawals.json is kept.
       - name: Restore proxy-slot cache
@@ -68,9 +62,11 @@ jobs:
         env:
           ETH_RPC_URL: ${{ secrets.ETH_RPC_URL || 'https://ethereum-rpc.publicnode.com' }}
         run: |
+          mkdir -p "$DATA"
           [ -f "$PROBE" ] || gunzip -c pipeline/wa_probe.seed.json.gz > "$PROBE"
           python -I pipeline/probe.py "$DS" "$PROBE"
           python -I pipeline/wc.py "$DS" "$PROBE" "$DATA"
+          touch "$RUNNER_TEMP/probe-ok"
       - name: Save proxy-slot cache
         if: steps.wc.outcome == 'success'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -78,10 +74,18 @@ jobs:
           path: ${{ runner.temp }}/wa_probe.json
           key: wa-probe-${{ github.run_id }}
 
+      # history.py reads the proxy slots only to mark EigenPod stake in the city; without them it still runs
+      - name: Operator history and entity tables
+        run: |
+          probe=(); [ -f "$RUNNER_TEMP/probe-ok" ] && probe=(--probe "$PROBE")
+          python -I pipeline/history.py "$DS" "$DATA" --every 4 "${probe[@]}"
+          python -I pipeline/tables.py "$DATA"
+
       - name: Export site data
         run: |
           python -I pipeline/export.py "$DS" "$DATA" site/public/data
           python -I pipeline/check.py site/public/data
+          python -I pipeline/og.py site/public/data/history.json site/public/og.png
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

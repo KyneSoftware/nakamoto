@@ -1,6 +1,6 @@
 """Operator Nakamoto/HHI and allocator Gini/HHI over time, from pintail's attributed validator set.
 
-usage: python -I history.py <dataset dir> <out dir> [--every N]
+usage: python -I history.py <dataset dir> <out dir> [--every N] [--probe wa_probe.json]
 
 Writes <out dir>/history.csv (one row per sampled frame) and <out dir>/latest_flows.csv (stake by\nallocator and operator entity at the latest frame, per scenario; entities under 0.01% pooled).
 The method, the scenarios and the column meanings are in METHOD.md.
@@ -18,6 +18,8 @@ PRO_SCALE_ETH = 3200                   # an unattributed group above 100 validat
 # Organisations whose own-run stake is their customers' or treasury's, not outside clients'. Their own fleet
 # (operator owner == organisation owner) takes no share of hidden unattributed stake in the pessimistic case.
 PLATFORM_KINDS = {'exchange', 'treasury_company'}
+# Lido modules shown apart in the city's "funded by" view; curated modules (lido/1, lido/4) stay 'lido'
+LIDO_MODULE_TAGS = {'lido/2': 'lido-sdvt', 'lido/3': 'lido-csm', 'lido/5': 'lido-csm'}
 
 def nakamoto(s, t=0.5):
     s = np.sort(np.asarray(s, float))[::-1]
@@ -76,7 +78,34 @@ def box_maps(d):
            zip(cur.validator_index, cur.box_id, cur.operator_organisation, cur.operator)}
     return org, op, raw, vop
 
-def load(c, e, org, op, raw, vop):
+def categories(d, probe_path=None):
+    """{validator index: display category} for the stake city's "funded by" view, from the latest snapshot.
+    Display only: every metric groups by operator entity, never by category.
+
+    Lido's modules (curated, Simple DVT, CSM) and Rocket Pool by allocator; then custody: pintail's Coinbase
+    custody attributions, and BitMine's stake, at BitGo where pintail's decision 0087 cites the wallet, else at a
+    custodian BitMine has not disclosed per wallet; then EigenPod withdrawal addresses (needs probe.py output);
+    then exchanges' own staking (organisation kind 'exchange'). Earlier in that list wins."""
+    import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from wc import bitgo_wallets, EIGENPOD_BEACON
+    v = pd.read_csv(d + '/validators.csv.gz', dtype=str,
+                    usecols=['validator_index', 'organisation', 'allocator', 'custodian', 'withdrawal_address'])
+    cat = pd.Series(pd.NA, index=v.index, dtype=object)
+    cat[v.organisation.map(org_kinds(d)) == 'exchange'] = 'exchange'
+    if probe_path:
+        probe = json.load(open(probe_path))
+        pods = {a for a, p in probe.items() if p['codelen'] and p['beacon'] == EIGENPOD_BEACON}
+        cat[v.withdrawal_address.isin(pods)] = 'eigenpod'
+    bm = v.organisation == 'bitmine'
+    cat[bm] = 'custody-other'
+    cat[v.custodian == 'coinbase'] = 'custody-coinbase'
+    cat[v.organisation == 'rocket-pool'] = 'rocket-pool'
+    lido = v.organisation == 'lido'
+    cat[lido] = v.allocator[lido].map(LIDO_MODULE_TAGS).fillna('lido')
+    v = v[cat.notna()]
+    return pd.Series(cat[cat.notna()].values, index=v.validator_index.astype(int))
+
+def load(c, e, org, op, raw, vop, cats=None):
     """Active validators at epoch e with their organisation, operator and fallback keys."""
     df = c.sql(f"""
       select a.validator_index vi, a.node_id, s.effective_balance_eth::double eb,
@@ -91,6 +120,10 @@ def load(c, e, org, op, raw, vop):
     miss = df.op.isna() & df.org.notna()
     df.loc[miss, 'op'] = [vop.get((i, b)) for i, b in zip(df.vi[miss], df.node_id[miss])]
     df['clustered'] = 'c:' + df.rc.fillna(df.wc).fillna(df.wa)
+    df['cat'] = df.org.fillna('unattributed')
+    if cats is not None:
+        m = df.vi.map(cats)
+        df.loc[m.notna(), 'cat'] = m[m.notna()]
     return df
 
 SCENARIOS = ('high', 'cons', 'low')
@@ -114,13 +147,15 @@ def spread_pool(df, e, own, kinds):
 
 def flows(df, e, own, sc, kinds):
     """Stake by (allocator, operator entity) under one scenario: high, cons or low (METHOD.md)."""
+    # cat is a display category riding along (the stake city's "funded by"); no rule here reads it
     alloc = df.org.fillna('unattributed')
     unk = df.op.isna() & df.org.notna() & ~df.org.isin(SOLO)
     tail = df.op.isna() & ~unk
     tail_key = df.wa if sc == 'high' else df.clustered
-    parts = [pd.DataFrame({'alloc': alloc[df.op.notna()], 'entity': df.op[df.op.notna()], 'eb': df.eb[df.op.notna()]}),
-             pd.DataFrame({'alloc': alloc[tail], 'entity': tail_key[tail], 'eb': df.eb[tail]})]
-    for o, amt in df[unk].groupby('org').eb.sum().items():
+    kn_ = df.op.notna()
+    parts = [pd.DataFrame({'alloc': alloc[kn_], 'cat': df.cat[kn_], 'entity': df.op[kn_], 'eb': df.eb[kn_]}),
+             pd.DataFrame({'alloc': alloc[tail], 'cat': df.cat[tail], 'entity': tail_key[tail], 'eb': df.eb[tail]})]
+    for (o, ct), amt in df[unk].groupby(['org', 'cat']).eb.sum().items():
         to = o
         if sc != 'high':
             to = FOLD.get(o, o)
@@ -128,16 +163,18 @@ def flows(df, e, own, sc, kinds):
             if to in HINTS:
                 to = HINTS[to]
             elif kn.sum() >= MIN_KNOWN * df.eb[df.org == to].sum():
-                parts.append(pd.DataFrame({'alloc': o, 'entity': kn.index, 'eb': amt * kn.values / kn.sum()})); continue
-        parts.append(pd.DataFrame({'alloc': [o], 'entity': [to], 'eb': [amt]}))   # run in-house, or per the hint
-    f = pd.concat(parts, ignore_index=True).groupby(['alloc', 'entity'], as_index=False).eb.sum()
+                parts.append(pd.DataFrame({'alloc': o, 'cat': ct, 'entity': kn.index, 'eb': amt * kn.values / kn.sum()})); continue
+        parts.append(pd.DataFrame({'alloc': [o], 'cat': [ct], 'entity': [to], 'eb': [amt]}))   # run in-house, or per the hint
+    f = pd.concat(parts, ignore_index=True).groupby(['alloc', 'cat', 'entity'], as_index=False).eb.sum()
     if sc == 'low':
-        big = (f.alloc == 'unattributed') & (f.eb > PRO_SCALE_ETH)
+        un = f.alloc == 'unattributed'
+        big = un & (f.eb.where(un, 0).groupby(f.entity).transform('sum') > PRO_SCALE_ETH)
         named = spread_pool(df, e, own, kinds)
-        spread = pd.DataFrame({'alloc': 'unattributed', 'entity': named.index, 'eb': f.eb[big].sum() * named.values / named.sum()})
+        spread = pd.concat([pd.DataFrame({'alloc': 'unattributed', 'cat': ct, 'entity': named.index, 'eb': amt * named.values / named.sum()})
+                            for ct, amt in f[big].groupby('cat').eb.sum().items()] or [f.iloc[:0]], ignore_index=True)
         f = pd.concat([f[~big], spread], ignore_index=True)
     f['entity'] = [owner_at(k, e, own) for k in f.entity]
-    return f.groupby(['alloc', 'entity'], as_index=False).eb.sum()
+    return f.groupby(['alloc', 'cat', 'entity'], as_index=False).eb.sum()
 
 def score(df, e, own, kinds, top=None):
     """The frame's metrics; with top, also fills in its flows per scenario."""
@@ -170,20 +207,27 @@ def score(df, e, own, kinds, top=None):
 def main():
     d, dst = sys.argv[1], sys.argv[2]
     every = int(sys.argv[sys.argv.index('--every') + 1]) if '--every' in sys.argv else 4
+    probe = sys.argv[sys.argv.index('--probe') + 1] if '--probe' in sys.argv else None
     c = duckdb.connect()
     c.sql(f"create table att as select * from '{d}/attributions.parquet'")
     c.sql(f"create table stk as select * from '{d}/stake.parquet'")
     epochs = [r[0] for r in c.sql(f"select distinct epoch from '{d}/treemap.parquet' order by 1").fetchall()]
     pick = [e for e in sorted(set(epochs[::every] + [epochs[-1]])) if e > 0]
     org, op, raw, vop = box_maps(d)
+    cats = categories(d, probe)
     own, kinds = ownership(d), org_kinds(d)
     rows, top = [], {}
     for e in pick:
-        rows.append(score(load(c, e, org, op, raw, vop), e, own, kinds, top if e == pick[-1] else None))
+        last = e == pick[-1]
+        rows.append(score(load(c, e, org, op, raw, vop, cats if last else None), e, own, kinds, top if last else None))
         r = rows[-1]
         print(r['date'], 'n50 high/cons/low', r['op_n50_high'], r['op_n50_cons'], r['op_n50_low'], flush=True)
     pd.DataFrame(rows).to_csv(f'{dst}/history.csv', index=False, float_format='%.6g')
     f = pd.concat([top[sc].assign(scenario=sc) for sc in SCENARIOS])
+    # unpooled, by display category: one row per (category, operator entity), for the stake city
+    full = f.groupby(['scenario', 'cat', 'entity'], as_index=False).eb.sum().rename(columns={'cat': 'alloc'})
+    full.to_csv(f'{dst}/latest_flows_full.csv.gz', index=False, float_format='%.6g')
+    f = f.groupby(['scenario', 'alloc', 'entity'], as_index=False).eb.sum()
     f['share'] = f.eb / f.groupby('scenario').eb.transform('sum')
     # entities under 0.01% of stake (solo stakers, small groups) are pooled per allocator
     small = f.groupby(['scenario', 'entity']).share.transform('sum') < 1e-4

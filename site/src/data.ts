@@ -8,10 +8,18 @@ export interface Meta {
   latest_frame: string; eth: number; generated: string;
 }
 export type History = Record<string, (number | string)[]> & { date: string[]; epoch: number[] };
-export interface Plot { e: string; n: string; x: number; y: number; w: number; d: number; h: number[]; eth: number[] }
+/** A plot: side w tiles, h storeys per scenario (fractional), so w*w*h*block_eth = eth. mix: [alloc index, eth]. */
+export interface Plot {
+  n: string; k: 'op' | 'csm' | 'rp' | 'un'; x: number; y: number; w: number;
+  h: number[]; eth: number[]; mix: [number, number][][];
+}
 export interface City {
-  block_eth: number; scenarios: Scenario[]; plots: Plot[];
-  sprawl: { tiles: number[]; count: number[] }; half: Record<Scenario, number[]>;
+  block_eth: number; cells: number; scenarios: Scenario[]; allocs: string[]; alloc_names: string[];
+  plots: Plot[]; half: Record<Scenario, number[]>; total: number[];
+  /** Each funding source's arc of the city, [from, to] radians of atan2(tile y, tile x). */
+  arcs: Record<string, [number, number]>;
+  /** Buildings under one block, per scenario, flat: cell x, cell y, side k cells, storeys × 1000, alloc index. */
+  small: Record<Scenario, number[]>;
 }
 
 async function get<T>(path: string): Promise<T> {
