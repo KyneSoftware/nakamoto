@@ -1,0 +1,84 @@
+:root {
+  --bg: #fbfaf7;
+  --panel: #ffffff;
+  --ink: #16181d;
+  --ink2: #4a4f59;
+  --muted: #858b96;
+  --line: #e6e3dc;
+  --accent: #d8432f;        /* the danger zone and the towers that run half of all stake */
+  --accent-soft: #f6dcd6;
+  --blue: #2b6fd6;
+  --band: rgba(43, 111, 214, 0.16);
+  --sprawl: #8fb28a;
+  --city-other: #9aa3b2;
+  --ground: #efece5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1115; --panel: #161920; --ink: #eef0f3; --ink2: #b6bcc6; --muted: #7c8390; --line: #262a33;
+    --accent: #ff6a52; --accent-soft: #3a1d18; --blue: #6aa0ff; --band: rgba(106, 160, 255, 0.18);
+    --sprawl: #6f9468; --city-other: #5d6676; --ground: #1b1f27; color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0f1115; --panel: #161920; --ink: #eef0f3; --ink2: #b6bcc6; --muted: #7c8390; --line: #262a33;
+  --accent: #ff6a52; --accent-soft: #3a1d18; --blue: #6aa0ff; --band: rgba(106, 160, 255, 0.18);
+  --sprawl: #6f9468; --city-other: #5d6676; --ground: #1b1f27; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Inter, Roboto, sans-serif;
+}
+a { color: inherit; text-underline-offset: 3px; }
+main, header.top, footer { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+header.top { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; }
+.brand { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+.name { font-weight: 700; text-decoration: none; letter-spacing: -0.01em; }
+.name span { color: var(--muted); font-weight: 500; }
+nav a { color: var(--ink2); text-decoration: none; margin-right: 16px; font-size: 15px; }
+nav a[aria-current='page'] { color: var(--ink); font-weight: 600; }
+.theme { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; width: 36px; height: 36px; cursor: pointer; }
+
+.hero { padding: 48px 0 24px; }
+h1 { font-size: clamp(28px, 5vw, 46px); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 12px; max-width: 22ch; }
+h1 #h-top7-share { color: var(--accent); }
+.lede { color: var(--ink2); font-size: 18px; max-width: 60ch; margin: 0 0 28px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 0; }
+.tiles div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.tiles dt { color: var(--muted); font-size: 13px; }
+.tiles dd { margin: 4px 0 0; font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tiles dd.sub { font-size: 13px; font-weight: 400; color: var(--muted); margin-top: 0; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin: 20px 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+h2 { font-size: 18px; margin: 0 0 8px; }
+.note { color: var(--ink2); font-size: 14px; max-width: 70ch; margin: 8px 0 0; }
+.scenario { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.scenario button { background: none; border: 0; padding: 6px 12px; color: var(--ink2); cursor: pointer; font: inherit; font-size: 14px; }
+.scenario button[aria-pressed='true'] { background: var(--ink); color: var(--bg); }
+
+nakamoto-band, stake-city { display: block; position: relative; }
+nakamoto-band svg { width: 100%; height: auto; display: block; }
+nakamoto-band .axis text { fill: var(--muted); font-size: 12px; }
+nakamoto-band .axis line, nakamoto-band .grid line { stroke: var(--line); }
+nakamoto-band .zone { fill: var(--accent-soft); }
+nakamoto-band .zone-label { fill: var(--accent); font-size: 12px; font-weight: 600; }
+nakamoto-band .band { fill: var(--band); }
+nakamoto-band .line { fill: none; stroke: var(--blue); stroke-width: 1.5; }
+nakamoto-band .line.sel { stroke-width: 3; }
+nakamoto-band .marker line { stroke: var(--muted); stroke-dasharray: 3 3; }
+nakamoto-band .marker text { fill: var(--muted); font-size: 12px; }
+nakamoto-band .hover line { stroke: var(--ink2); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -110%); }
+
+stake-city { height: min(70vh, 640px); border-radius: 12px; overflow: hidden; background: var(--ground); }
+stake-city canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+stake-city .legend { position: absolute; left: 10px; bottom: 10px; right: 10px; width: fit-content; font-size: 13px; color: var(--ink2); display: flex; gap: 6px 14px; flex-wrap: wrap; background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 6px 10px; border-radius: 8px; }
+stake-city .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+footer { color: var(--muted); font-size: 13px; padding-top: 16px; padding-bottom: 40px; }
+footer p { margin: 6px 0; max-width: 90ch; }

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Operator Nakamoto</title>
+    <meta
+      name="description"
+      content="How few node operators run half of all staked ETH, from pintail's attributed validator set. Updated daily."
+    />
+    <meta property="og:title" content="Operator Nakamoto" />
+    <meta
+      property="og:description"
+      content="How few node operators run half of all staked ETH. Updated daily."
+    />
+    <meta property="og:image" content="https://nakamoto.kyne.eu/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <script>
+      try {
+        const t = localStorage.getItem("theme");
+        if (t) document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <a href="/" class="name">nakamoto<span>.kyne.eu</span></a>
+        <nav aria-label="Pages">
+          <a href="/" aria-current="page">Operators</a>
+          <a href="https://pintail.xyz/staking/treemap/">Allocators ↗</a>
+        </nav>
+      </div>
+      <button
+        id="theme"
+        class="theme"
+        type="button"
+        aria-label="Toggle dark mode"
+      >
+        ◐
+      </button>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>
+          <span id="h-top7">Seven</span> node operators run
+          <span id="h-top7-share">–</span> of all staked ETH.
+        </h1>
+        <p class="lede" id="h-lede">Loading…</p>
+        <dl class="tiles" aria-live="polite">
+          <div>
+            <dt>Operators running &gt;50%</dt>
+            <dd id="t-n50">–</dd>
+            <dd class="sub">pessimistic – optimistic</dd>
+          </div>
+          <div>
+            <dt>At the Merge</dt>
+            <dd id="t-merge">–</dd>
+            <dd class="sub">Sep 2022</dd>
+          </div>
+          <div>
+            <dt>Peak</dt>
+            <dd id="t-peak">–</dd>
+            <dd class="sub" id="t-peak-date">–</dd>
+          </div>
+          <div>
+            <dt>Named operator known</dt>
+            <dd id="t-known">–</dd>
+            <dd class="sub">of active stake</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>How many operators run half of all stake</h2>
+          <div class="scenario" role="radiogroup" aria-label="Scenario">
+            <button data-s="low" aria-pressed="true">Pessimistic</button>
+            <button data-s="cons" aria-pressed="false">Central</button>
+            <button data-s="high" aria-pressed="false">Optimistic</button>
+          </div>
+        </div>
+        <nakamoto-band></nakamoto-band>
+        <p class="note">
+          The band spans three scenarios for who runs stake without a named
+          operator. Below ten (shaded), a handful of firms can together stall
+          finality or choose which history to keep.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Stake city</h2>
+          <p class="note">
+            Each block is 2,048 ETH. Operators are plots, highest stake nearest
+            the centre; the towers in colour together run over half of all
+            stake. Solo stakers and small groups are the one-storey sprawl at
+            the edge.
+          </p>
+        </div>
+        <stake-city></stake-city>
+      </section>
+    </main>
+
+    <footer>
+      <p id="fresh"></p>
+      <p>
+        Data:
+        <a href="https://pintail.xyz/staking/">pintail.xyz/staking</a>
+        attributed validator set (<a
+          href="https://creativecommons.org/licenses/by/4.0/"
+          >CC BY 4.0</a
+        >): every attribution is pintail's work; this site re-aggregates it.
+        Analysis and views: Kyne Software
+      </p>
+      <p>
+        Vibecoded with love for the Ethereum community by Kyne Software. NFA,
+        YMMV.
+      </p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
