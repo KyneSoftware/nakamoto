@@ -82,8 +82,8 @@ def categories(d, probe_path=None):
     """{validator index: display category} for the stake city's "funded by" view, from the latest snapshot.
     Display only: every metric groups by operator entity, never by category.
 
-    Lido's modules (curated, Simple DVT, CSM) and Rocket Pool by allocator; then custody: pintail's Coinbase
-    custody attributions, and BitMine's stake, at BitGo where pintail's decision 0087 cites the wallet, else at a
+    Lido's modules (curated, Simple DVT, CSM) and Rocket Pool by allocator; then custody: Coinbase (pintail's Coinbase
+    custody attributions plus Coinbase's own staking), and BitMine's stake, at BitGo where pintail's decision 0087 cites the wallet, else at a
     custodian BitMine has not disclosed per wallet; then EigenPod withdrawal addresses (needs probe.py output);
     then exchanges' own staking (organisation kind 'exchange'). Earlier in that list wins."""
     import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -99,6 +99,7 @@ def categories(d, probe_path=None):
     bm = v.organisation == 'bitmine'
     cat[bm] = 'custody-other'
     cat[v.custodian == 'coinbase'] = 'custody-coinbase'
+    cat[v.organisation == 'coinbase'] = 'custody-coinbase'   # Coinbase's own staking joins its custody: one colour
     cat[v.organisation == 'rocket-pool'] = 'rocket-pool'
     lido = v.organisation == 'lido'
     cat[lido] = v.allocator[lido].map(LIDO_MODULE_TAGS).fillna('lido')

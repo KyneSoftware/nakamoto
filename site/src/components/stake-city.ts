@@ -21,7 +21,7 @@ const STACK = ['other', 'unattributed', 'exchange', 'custody-other', 'eigenpod',
 type Cat = (typeof CATS)[number];
 const CAT_LABEL: Record<Cat, string> = {
   lido: 'Lido', 'rocket-pool': 'Rocket Pool',
-  'custody-coinbase': 'Coinbase custody', eigenpod: 'EigenPods', 'custody-other': 'BitGo or undisclosed custodian',
+  'custody-coinbase': 'Coinbase (custody and own staking)', eigenpod: 'EigenPods', 'custody-other': 'BitGo or undisclosed custodian',
   exchange: 'Exchanges', unattributed: 'unattributed', other: 'other allocators',
 };
 const CAT_VAR: Record<Cat, string> = {
@@ -328,8 +328,8 @@ class StakeCity extends HTMLElement {
     for (let i = 0; i < S.length; i += 5) if (sel.has(this.catOf[S[i + 4]])) { ns++; es += S[i + 2] ** 2 * (S[i + 3] / 1000) * 32; }
     const names = [...sel].map((x) => CAT_LABEL[x]).join(' + ');
     this.caption.textContent = `Withdraws to ${names}: ${fmt(eth + es)} ETH (${((100 * (eth + es)) / c.total[k]).toFixed(1)}% of stake), ` +
-      `in ${touched.length} of ${live.length} buildings over ${c.block_eth.toLocaleString('en-US')} ETH, including ${inHalf} of the ${half.size} that together run half, ` +
-      `plus ${ns.toLocaleString('en-US')} smaller ones.` + (this.picked.size ? '' : ' Click a colour to pick another destination.');
+      `in ${touched.length} of ${live.length} buildings over ${c.block_eth.toLocaleString('en-US')} ETH, including ${inHalf} of the ${half.size} that together run half` +
+      (ns ? `, plus ${ns.toLocaleString('en-US')} smaller ones.` : '.') + (this.picked.size ? '' : ' Click a colour to pick another destination.');
   }
 
   private hover(e: PointerEvent) {

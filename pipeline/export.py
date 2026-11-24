@@ -269,7 +269,7 @@ def city(full):
 def alloc_name(a):
     from tables import ALLOC_NAMES
     return {'lido': 'Lido curated', 'lido-csm': 'Lido CSM', 'lido-sdvt': 'Lido Simple DVT', 'rocket-pool': 'Rocket Pool',
-            'custody-coinbase': 'Coinbase custody', 'custody-other': 'BitMine at BitGo or an undisclosed custodian',
+            'custody-coinbase': 'Coinbase (custody and own staking)', 'custody-other': 'BitMine at BitGo or an undisclosed custodian',
             'eigenpod': 'EigenPods', 'exchange': 'Exchanges (own staking)',
             'unattributed': 'unattributed'}.get(a) or nice_alloc(a, ALLOC_NAMES)
 
